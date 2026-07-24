@@ -1,0 +1,204 @@
+# =============================================================================
+# Discord-like monorepo .gitignore
+# Covers: Go backend, React/Vite frontend, database, LiveKit, local deploy data
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# OS
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# -----------------------------------------------------------------------------
+# Editors / IDEs
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# -----------------------------------------------------------------------------
+# Environment & secrets (never commit real credentials)
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+!.ssh/*.pub
+secrets/
+**/secrets/
+*.secret
+credentials.json
+service-account*.json
+
+# LiveKit / auth material
+livekit/keys/
+**/livekit.secret.yaml
+
+# Kubernetes secret manifests with real data (keep templates)
+**/k8s/**/*secret*.yaml
+!**/k8s/**/*secret*.example.yaml
+!**/k8s/**/*secret*.template.yaml
+
+# -----------------------------------------------------------------------------
+# Go (backend)
+# -----------------------------------------------------------------------------
+backend/bin/
+backend/dist/
+backend/tmp/
+backend/vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+coverage.txt
+profile.cov
+cpu.prof
+mem.prof
+__debug_bin*
+debug
+
+# Go workspace local
+go.work
+go.work.sum
+
+# -----------------------------------------------------------------------------
+# Node / frontend (Vite + React)
+# -----------------------------------------------------------------------------
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/build/
+frontend/.vite/
+frontend/.turbo/
+frontend/.cache/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+
+# Package manager noise (keep lockfiles — do NOT ignore package-lock.json / pnpm-lock.yaml)
+.npm/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# TypeScript / tooling caches
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+.oxlintcache
+
+# -----------------------------------------------------------------------------
+# Logs & local runtime
+# -----------------------------------------------------------------------------
+logs/
+*.log
+tmp/
+temp/
+*.pid
+*.seed
+
+# -----------------------------------------------------------------------------
+# Database (local dumps / runtime — migrations & seeds stay tracked)
+# -----------------------------------------------------------------------------
+database/*.dump
+database/*.sql.gz
+database/backups/
+*.dump
+*.backup
+postgres-data/
+pgdata/
+**/pgdata/
+
+# -----------------------------------------------------------------------------
+# Docker / Compose local volumes & overrides
+# -----------------------------------------------------------------------------
+docker-data/
+.compose-data/
+**/docker-compose.override.yml
+!**/docker-compose.override.yml.example
+
+# -----------------------------------------------------------------------------
+# LiveKit local runtime
+# -----------------------------------------------------------------------------
+livekit/data/
+livekit/*.log
+
+# -----------------------------------------------------------------------------
+# Observability / SigNoz / OTel local data
+# -----------------------------------------------------------------------------
+signoz-data/
+otel-data/
+**/clickhouse-data/
+**/signoz/
+!backend/deploy/observability/
+
+# -----------------------------------------------------------------------------
+# Kubernetes / local clusters
+# -----------------------------------------------------------------------------
+.kube/
+*.kubeconfig
+
+# -----------------------------------------------------------------------------
+# Test / coverage / reports (any package)
+# -----------------------------------------------------------------------------
+coverage/
+.nyc_output/
+htmlcov/
+.pytest_cache/
+playwright-report/
+test-results/
+allure-results/
+
+# -----------------------------------------------------------------------------
+# Misc build / binary artifacts
+# -----------------------------------------------------------------------------
+dist/
+build/
+out/
+*.o
+*.a
+
+# -----------------------------------------------------------------------------
+# Cursor / AI local (optional local state; keep shared rules if you add them later)
+# -----------------------------------------------------------------------------
+.cursor/cache/
+.cursor/projects/
+*.cursor-scratch
+
+# -----------------------------------------------------------------------------
+# Archives accidentally dropped in repo root
+# -----------------------------------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
