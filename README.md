@@ -15,6 +15,8 @@ Hobby project with **production-grade structure**: Discord-style servers, text/v
 - Friends, DMs, group DMs, in-app notifications
 - Production practices: hexagonal Go, migrations, cookies+CSRF, OTel → SigNoz, nginx LB, later Kubernetes
 
+
+
 ### Non-goals (for now)
 
 - Real multi-tenant SaaS scale
@@ -23,6 +25,8 @@ Hobby project with **production-grade structure**: Discord-style servers, text/v
 - Full Discord parity (bots marketplace, Stage, Forums day one)
 
 ---
+
+
 
 ## 2. Repository layout
 
@@ -38,57 +42,71 @@ Each domain/feature folder contains a `README.md` describing **what belongs ther
 
 ---
 
+
+
 ## 3. Technology stack
 
-| Layer | Choice |
-|-------|--------|
-| Frontend | React, TypeScript, Vite |
-| Backend | Go, hexagonal + DDD contexts |
-| DB | PostgreSQL (`BYTEA` attachments) |
-| Cache / sessions / pubsub | Redis |
-| Voice / screen share | LiveKit |
-| Auth | Access + refresh **HttpOnly cookies** + **CSRF** |
-| Observability | OpenTelemetry → **SigNoz** (traces, metrics, logs, latency) |
-| Edge | nginx reverse proxy / load balancer |
-| Orchestration (later) | Kubernetes |
+
+| Layer                     | Choice                                                      |
+| ------------------------- | ----------------------------------------------------------- |
+| Frontend                  | React, TypeScript, Vite                                     |
+| Backend                   | Go, hexagonal + DDD contexts                                |
+| DB                        | PostgreSQL (`BYTEA` attachments)                            |
+| Cache / sessions / pubsub | Redis                                                       |
+| Voice / screen share      | LiveKit                                                     |
+| Auth                      | Access + refresh **HttpOnly cookies** + **CSRF**            |
+| Observability             | OpenTelemetry → **SigNoz** (traces, metrics, logs, latency) |
+| Edge                      | nginx reverse proxy / load balancer                         |
+| Orchestration (later)     | Kubernetes                                                  |
+
 
 ---
 
+
+
 ## 4. Backend bounded contexts
 
-| Context | Owns |
-|---------|------|
-| **identity** | Users, sessions, CSRF, profiles |
-| **directory** | Servers, channels, roles, permissions, invites |
-| **chat** | Messages, replies, reactions, attachments |
-| **social** | Friends, DMs, group DMs |
-| **realtime** | WebSocket hub, presence, typing, fanout |
-| **media** | LiveKit token issuance, voice state signaling |
-| **notification** | In-app notifications & preferences |
-| **platform** | Config, DB, Redis, HTTP, middleware, **OTel** |
+
+| Context          | Owns                                           |
+| ---------------- | ---------------------------------------------- |
+| **identity**     | Users, sessions, CSRF, profiles                |
+| **directory**    | Servers, channels, roles, permissions, invites |
+| **chat**         | Messages, replies, reactions, attachments      |
+| **social**       | Friends, DMs, group DMs                        |
+| **realtime**     | WebSocket hub, presence, typing, fanout        |
+| **media**        | LiveKit token issuance, voice state signaling  |
+| **notification** | In-app notifications & preferences             |
+| **platform**     | Config, DB, Redis, HTTP, middleware, **OTel**  |
+
 
 Media RTP goes **client ↔ LiveKit**. Go never relays WebRTC media.
 
 ---
 
+
+
 ## 5. Frontend feature map
 
-| Feature | Owns |
-|---------|------|
-| `auth` | Login/register/session |
-| `servers` | Server rail, create/join |
-| `channels` | Channel sidebar |
-| `chat` | Messages, replies, reactions, attachments |
-| `voice` | LiveKit room UI (mute/deafen/share) |
-| `friends` | Friend graph UI |
-| `dm` | DM / group DM UI |
-| `notifications` | Inbox & badges |
-| `profile` | Profile card/edit |
-| `settings` | Preferences |
-| `shared` | API client, WS, UI kit, config |
-| `app` | Router, layouts, providers |
+
+| Feature         | Owns                                      |
+| --------------- | ----------------------------------------- |
+| `auth`          | Login/register/session                    |
+| `servers`       | Server rail, create/join                  |
+| `channels`      | Channel sidebar                           |
+| `chat`          | Messages, replies, reactions, attachments |
+| `voice`         | LiveKit room UI (mute/deafen/share)       |
+| `friends`       | Friend graph UI                           |
+| `dm`            | DM / group DM UI                          |
+| `notifications` | Inbox & badges                            |
+| `profile`       | Profile card/edit                         |
+| `settings`      | Preferences                               |
+| `shared`        | API client, WS, UI kit, config            |
+| `app`           | Router, layouts, providers                |
+
 
 ---
+
+
 
 ## 6. Cross-cutting decisions
 
@@ -100,6 +118,8 @@ Media RTP goes **client ↔ LiveKit**. Go never relays WebRTC media.
 6. **Deploy path:** Compose → nginx multi-instance → Kubernetes.
 
 ---
+
+
 
 ## 7. Shippable production plan
 
@@ -113,8 +133,11 @@ Each update is **demoable**. Do not start the next until the current one works e
 - [x] Go module init + hexagonal context folders + READMEs
 - [x] Vite React-TS init + feature folders + READMEs
 - [x] Database / LiveKit / deploy / observability README placeholders
-- [ ] `npm install` in frontend (when you start coding)
-- [ ] Root/tooling: Makefile, `.env.example`, `.gitignore` refinements
+- [x] `npm install` in frontend — or `make bootstrap`
+- [x] Root `Makefile` + `.gitignore`
+- [ ] Per-service `.env.example` (backend, frontend, livekit, compose)
+
+
 
 ### Update 1 — Platform + Identity API
 
@@ -125,12 +148,16 @@ Each update is **demoable**. Do not start the next until the current one works e
 - Migrations: users (+ sessions if DB-backed)
 - SigNoz sees at least one HTTP trace and latency metric
 
+
+
 ### Update 2 — Frontend auth shell
 
 **Ship:** Login/register UI, protected layout chrome, cookie API client + CSRF.
 
 - `features/auth`, `app/router`, `app/layouts`, `shared/api`
 - Session survives refresh; logout clears state
+
+
 
 ### Update 3 — Servers & channels (Directory)
 
@@ -140,6 +167,8 @@ Each update is **demoable**. Do not start the next until the current one works e
 - Frontend server rail + channel sidebar
 - Owner vs member stub permissions
 
+
+
 ### Update 4 — Messages + WebSocket
 
 **Ship:** Two browsers chat live in a channel.
@@ -148,6 +177,8 @@ Each update is **demoable**. Do not start the next until the current one works e
 - Realtime WS + Redis pub/sub
 - Frontend chat list + composer + WS events
 - OTel: message write latency, active WS connections
+
+
 
 ### Update 5 — Replies, reactions, edit/delete
 
@@ -167,6 +198,8 @@ Each update is **demoable**. Do not start the next until the current one works e
 
 - Configure `/livekit`
 - `internal/media` + `features/voice`
+
+
 
 ### Update 9 — Presence, typing, unread, notifications
 
@@ -198,6 +231,8 @@ Threads, custom emoji, link embeds, 2FA, webhooks/bots, PTT polish — one slice
 
 ---
 
+
+
 ## 8. Critical path (first milestone)
 
 ```
@@ -212,6 +247,8 @@ Update 0 (done structurally)
 
 ---
 
+
+
 ## 9. Definition of done (per update)
 
 - Migration(s) if schema changed (`database/migrations`)
@@ -223,19 +260,25 @@ Update 0 (done structurally)
 
 ---
 
+
+
 ## 10. Observability (SigNoz) checklist
 
-| Phase | What to see in SigNoz |
-|-------|------------------------|
-| Update 1 | API service traces, HTTP latency histogram, error rate |
-| Update 4 | WS connection gauge, message publish latency |
-| Update 6 | Attachment upload size/latency |
-| Update 8 | LiveKit token issue latency |
+
+| Phase     | What to see in SigNoz                                           |
+| --------- | --------------------------------------------------------------- |
+| Update 1  | API service traces, HTTP latency histogram, error rate          |
+| Update 4  | WS connection gauge, message publish latency                    |
+| Update 6  | Attachment upload size/latency                                  |
+| Update 8  | LiveKit token issue latency                                     |
 | Update 12 | Alert rules: high error rate, auth failure spike, DB saturation |
+
 
 Collector config lives in `backend/deploy/observability`. SDK wiring in `backend/internal/platform/observability`.
 
 ---
+
+
 
 ## 11. Security baseline
 
@@ -250,23 +293,27 @@ Collector config lives in `backend/deploy/observability`. SDK wiring in `backend
 
 ---
 
+
+
 ## 12. How to use this repo (process)
 
-1. Pick the next **Update N** from §7  
-2. Open the relevant context/feature `README.md` and implement listed tasks  
-3. Add SQL under `database/migrations`  
-4. Touch LiveKit only for Update 8+ (`livekit/`)  
-5. Keep adapters thin; keep domain free of SQL/HTTP  
-6. Mark README checkboxes when done  
+1. Pick the next **Update N** from §7
+2. Open the relevant context/feature `README.md` and implement listed tasks
+3. Add SQL under `database/migrations`
+4. Touch LiveKit only for Update 8+ (`livekit/`)
+5. Keep adapters thin; keep domain free of SQL/HTTP
+6. Mark README checkboxes when done
 
 ---
+
+
 
 ## 13. Explicitly deferred
 
 - S3/MinIO  
 - Email/push providers  
 - Microservices split (single deployable API until proven need)  
-- Kafka (Redis pub/sub first)  
+- Kafka (Redis pub/sub first)
 
 ---
 
