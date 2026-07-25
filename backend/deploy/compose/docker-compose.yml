@@ -1,0 +1,93 @@
+# Local infrastructure for host-run API (`make up` then `make dev-api`).
+# Project dir: backend/deploy/compose (see root Makefile COMPOSE_*)
+
+name: discord
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: discord-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-discord}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-discord_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-discord_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-discord} -d ${POSTGRES_DB:-discord_db}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: discord-redis
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--requirepass",
+        "${REDIS_PASSWORD:-discord_redis_password}",
+        "--appendonly",
+        "yes",
+      ]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "-a",
+          "${REDIS_PASSWORD:-discord_redis_password}",
+          "ping",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  # Observability profile: `make signoz-up`
+  # OTLP HTTP :4318 (matches backend OTEL_EXPORTER_OTLP_ENDPOINT=localhost:4318)
+  # Jaeger UI  :16686 — local stand-in until you plug full SigNoz
+  # ---------------------------------------------------------------------------
+  otel-collector:
+    profiles: ["observability"]
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    container_name: discord-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+    depends_on:
+      jaeger:
+        condition: service_started
+
+  jaeger:
+    profiles: ["observability"]
+    image: jaegertracing/all-in-one:1.76.0
+    container_name: discord-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # Jaeger UI
+      # Internal OTLP for collector → jaeger (not published; collector uses service DNS)
+
+volumes:
+  postgres_data:
+  redis_data:

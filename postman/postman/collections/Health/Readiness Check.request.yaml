@@ -1,0 +1,5 @@
+$kind: http-request
+name: Readiness Check
+url: "{{base_url}}/readyz"
+method: GET
+order: 3528479387707698

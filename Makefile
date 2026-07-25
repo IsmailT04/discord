@@ -21,7 +21,7 @@ COMPOSE        := docker compose -f $(COMPOSE_FILE) --project-directory $(COMPOS
 NAME           ?=
 
 .PHONY: help bootstrap env-check \
-	up down logs \
+	ensure-compose-env up down logs ps \
 	migrate-up migrate-down migrate-status migrate-create \
 	migrate-drop migrate-reset migrate-fresh \
 	dev-api dev-web \
@@ -73,14 +73,23 @@ env-check: ## Remind which env example files to copy
 # Local infrastructure (Compose)
 # Requires: $(COMPOSE_FILE) — see backend/deploy/compose/README.md
 # ------------------------------------------------------------------------------
-up: ## Start local infra (Postgres, Redis, …)
-	$(COMPOSE) up -d
+ensure-compose-env: ## Copy compose .env.example → .env if missing
+	@if [ ! -f "$(COMPOSE_DIR)/.env" ]; then \
+		cp "$(COMPOSE_DIR)/.env.example" "$(COMPOSE_DIR)/.env"; \
+		echo "==> Created $(COMPOSE_DIR)/.env from .env.example"; \
+	fi
+
+up: ensure-compose-env ## Start local infra (Postgres, Redis)
+	$(COMPOSE) up -d --wait
 
 down: ## Stop local infra
 	$(COMPOSE) down
 
 logs: ## Follow Compose logs
 	$(COMPOSE) logs -f
+
+ps: ## Show Compose service status
+	$(COMPOSE) ps
 
 # ------------------------------------------------------------------------------
 # Database migrations (host Go CLI → database/migrations)
@@ -171,8 +180,8 @@ clean: ## Remove build artifacts and coverage files
 # ------------------------------------------------------------------------------
 # Observability (SigNoz) — compose profile "observability"
 # ------------------------------------------------------------------------------
-signoz-up: ## Start SigNoz / OTel stack (compose profile)
-	$(COMPOSE) --profile observability up -d
+signoz-up: ensure-compose-env ## Start OTel collector + Jaeger (observability profile)
+	$(COMPOSE) --profile observability up -d --wait
 
 signoz-down: ## Stop observability profile services
 	$(COMPOSE) --profile observability stop

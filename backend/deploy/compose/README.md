@@ -1,15 +1,43 @@
 # deploy/compose
 
-Docker Compose definitions for local / single-host runs.
+Docker Compose for local infra. The Go API runs on the host via `make dev-api`.
 
-## What lives here
+## Files
 
-- `docker-compose.yml` (and overrides) for: API, Postgres, Redis, OTel collector, SigNoz (or SigNoz lite), references to LiveKit
-- Env sample files
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | Postgres + Redis; optional `observability` profile |
+| `otel-collector-config.yaml` | OTLP → Jaeger (+ debug) |
+| `.env.example` | Compose credentials / ports |
+| `.env` | Local compose env (gitignored; copy from example) |
+
+## Ports
+
+| Service | Host port |
+|---------|-----------|
+| Postgres | 5432 |
+| Redis | 6379 |
+| OTLP HTTP (profile) | 4318 |
+| OTLP gRPC (profile) | 4317 |
+| Jaeger UI (profile) | 16686 |
+
+## Makefile
+
+```bash
+make up          # postgres + redis (waits for healthy)
+make down
+make logs
+make signoz-up   # + otel-collector + jaeger
+make signoz-down
+make dev-api     # host API against localhost DB/Redis
+```
+
+Credentials must match `backend/.env` (`DB_*`, `REDIS_*`).
 
 ## Remaining tasks
 
-- [ ] Base compose with Postgres + Redis + API
-- [ ] Optional profile for SigNoz / OTel collector
-- [ ] Optional profile linking LiveKit using config from `/livekit`
-- [ ] Document ports and volumes
+- [x] Base compose with Postgres + Redis
+- [x] Optional observability profile (collector + Jaeger UI)
+- [ ] Full SigNoz stack (replace Jaeger when you want production-like dashboards)
+- [ ] Optional LiveKit service profile
+- [x] Document ports and volumes
