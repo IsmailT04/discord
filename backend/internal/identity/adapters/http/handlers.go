@@ -44,7 +44,7 @@ type authResponse struct {
 	User domain.PublicProfile `json:"user"`
 }
 
-// Register handles POST /auth/register.
+// Register handles POST /api/v1/auth/register.
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := httpx.ReadJSON(w, r, &req, 1<<20); err != nil {
@@ -71,7 +71,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	_ = httpx.WriteJSON(w, http.StatusCreated, authResponse{User: result.User})
 }
 
-// Login handles POST /auth/login.
+// Login handles POST /api/v1/auth/login.
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := httpx.ReadJSON(w, r, &req, 1<<20); err != nil {
@@ -96,7 +96,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	_ = httpx.WriteJSON(w, http.StatusOK, authResponse{User: result.User})
 }
 
-// Refresh handles POST /auth/refresh.
+// Refresh handles POST /api/v1/auth/refresh.
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	refreshToken := auth.RefreshTokenFromRequest(r)
 	result, err := h.svc.Refresh(r.Context(), refreshToken)
@@ -117,7 +117,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	_ = httpx.WriteJSON(w, http.StatusOK, authResponse{User: result.User})
 }
 
-// Logout handles POST /auth/logout.
+// Logout handles POST /api/v1/auth/logout.
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	access := auth.SessionIDFromContext(r.Context())
 	if access == "" {
@@ -137,7 +137,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Me handles GET /users/me.
+// Me handles GET /api/v1/users/me.
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	user := auth.UserFromContext(r.Context())
 	if user == nil {

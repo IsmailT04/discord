@@ -96,7 +96,10 @@ func run() error {
 		middleware.RateLimit(limiter),
 		middleware.LoadSession(sessions),
 		// register/login bootstrap without CSRF; refresh requires CSRF (cookie already issued).
-		middleware.CSRF("/auth/register", "/auth/login"),
+		middleware.CSRF(
+			identityhttp.APIPrefix+"/auth/register",
+			identityhttp.APIPrefix+"/auth/login",
+		),
 	)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
