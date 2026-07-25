@@ -9,7 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ismailtemuroglu/discord/internal/identity/adapters/hasher"
+	identityhttp "github.com/ismailtemuroglu/discord/internal/identity/adapters/http"
+	"github.com/ismailtemuroglu/discord/internal/identity/adapters/persistence"
 	"github.com/ismailtemuroglu/discord/internal/identity/adapters/session"
+	"github.com/ismailtemuroglu/discord/internal/identity/application"
 	"github.com/ismailtemuroglu/discord/internal/platform/config"
 	"github.com/ismailtemuroglu/discord/internal/platform/database"
 	"github.com/ismailtemuroglu/discord/internal/platform/httpx"
@@ -69,13 +73,20 @@ func run() error {
 	}()
 
 	sessions := session.NewRedisStore(rdb.GetClient())
+	users := persistence.NewUserRepository(db.Pool())
+	passwords := hasher.New()
+	identitySvc := application.New(users, sessions, passwords, application.Config{
+		AccessTokenTTL: cfg.Auth.AccessTokenTTL,
+	})
+	identityHandler := identityhttp.NewHandler(identitySvc, cfg)
+
 	limiter := middleware.NewTokenBucketLimiter(20, 40)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealthz)
 	mux.HandleFunc("GET /readyz", handleReadyz(db, rdb))
+	identityhttp.Mount(mux, identityHandler)
 
-	// Public stack for now. You will add RequireAuth route groups when wiring Identity.
 	handler := middleware.Chain(mux,
 		middleware.Recovery,
 		middleware.RequestID,
@@ -83,7 +94,7 @@ func run() error {
 		middleware.AccessLog,
 		middleware.RateLimit(limiter),
 		middleware.LoadSession(sessions),
-		middleware.CSRF,
+		middleware.CSRF("/auth/register", "/auth/login"),
 	)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
