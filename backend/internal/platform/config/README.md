@@ -9,6 +9,6 @@ Application configuration loading.
 
 ## Remaining tasks
 
-- [ ] Define required vs optional vars
+- [x] Define required vs optional vars
 - [ ] Validate durations, URLs, cookie secure flags
 - [ ] Separate local / compose / k8s example env files (no secrets committed)
