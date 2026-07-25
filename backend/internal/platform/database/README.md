@@ -10,6 +10,6 @@ Postgres connectivity and transaction helpers.
 
 ## Remaining tasks
 
-- [ ] Pool config (max conns, lifetimes)
-- [ ] OTel DB instrumentation
-- [ ] Migrate runner is **not** here — see `cmd/migrate` + `/database`
+- [x] Pool config (max conns, lifetimes)
+- [x] OTel DB instrumentation
+- [x] Migrate runner is **not** here — see `cmd/migrate` + `/database`

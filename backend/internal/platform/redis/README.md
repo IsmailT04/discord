@@ -10,6 +10,6 @@ Redis client used for sessions, presence, pub/sub, rate limits.
 
 ## Remaining tasks
 
-- [ ] Client + OTel instrumentation
-- [ ] Document TTL conventions
+- [x] Client + OTel instrumentation
+- [x] Document TTL conventions
 - [ ] Pub/sub channel naming shared with Realtime adapters
