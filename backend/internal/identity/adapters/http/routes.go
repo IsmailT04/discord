@@ -8,11 +8,12 @@ import (
 
 // Mount registers identity routes on mux.
 //
-// Public:  POST /auth/register, POST /auth/login
+// Public:  POST /auth/register, POST /auth/login, POST /auth/refresh
 // Protected (RequireAuth): POST /auth/logout, GET /users/me
 func Mount(mux *http.ServeMux, h *Handler) {
 	mux.HandleFunc("POST /auth/register", h.Register)
 	mux.HandleFunc("POST /auth/login", h.Login)
+	mux.HandleFunc("POST /auth/refresh", h.Refresh)
 
 	withAuth := func(next http.Handler) http.Handler {
 		return middleware.Chain(next, middleware.RequireAuth)

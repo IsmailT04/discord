@@ -22,11 +22,24 @@ type SessionData struct {
 	Email    string
 }
 
-// SessionStore creates and revokes opaque sessions (lookup is also used by
-// platform middleware via auth.SessionLookup on the same adapter).
+// TokenPair is an access + refresh token issued together.
+type TokenPair struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+// SessionStore creates, rotates, and revokes opaque access + refresh sessions.
+// Lookup for middleware is provided by the same adapter via auth.SessionLookup.
 type SessionStore interface {
-	Create(ctx context.Context, data SessionData, ttl time.Duration) (token string, err error)
-	Revoke(ctx context.Context, token string) error
+	// Create issues a new access + refresh pair under a fresh token family.
+	Create(ctx context.Context, data SessionData, accessTTL, refreshTTL time.Duration) (TokenPair, error)
+	// RotateRefresh consumes refreshToken and issues a new pair (same family).
+	// Detects reuse of already-rotated tokens and revokes the family.
+	RotateRefresh(ctx context.Context, refreshToken string, accessTTL, refreshTTL time.Duration) (TokenPair, SessionData, error)
+	// Revoke deletes the access session.
+	Revoke(ctx context.Context, accessToken string) error
+	// RevokeByRefresh revokes the refresh token's family (access + all refresh tokens).
+	RevokeByRefresh(ctx context.Context, refreshToken string) error
 }
 
 // PasswordHasher hashes and verifies passwords (argon2id).

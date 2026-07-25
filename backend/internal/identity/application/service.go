@@ -12,7 +12,8 @@ import (
 
 // Config holds TTLs and other application-level auth settings.
 type Config struct {
-	AccessTokenTTL time.Duration
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
 }
 
 // Service orchestrates identity use cases.
@@ -46,11 +47,13 @@ type RegisterInput struct {
 	DisplayName string
 }
 
-// AuthResult is returned after successful register/login.
+// AuthResult is returned after successful register/login/refresh.
 type AuthResult struct {
 	User         domain.PublicProfile
 	AccessToken  string
+	RefreshToken string
 	AccessTTL    time.Duration
+	RefreshTTL   time.Duration
 }
 
 // Register creates a user and opens a session.
@@ -107,12 +110,52 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthResult, error)
 	return s.openSession(ctx, user)
 }
 
-// Logout revokes the given session token.
-func (s *Service) Logout(ctx context.Context, token string) error {
-	if token == "" {
-		return nil
+// Refresh rotates the refresh token and issues a new access + refresh pair.
+func (s *Service) Refresh(ctx context.Context, refreshToken string) (*AuthResult, error) {
+	if refreshToken == "" {
+		return nil, domain.ErrInvalidRefresh
 	}
-	return s.sessions.Revoke(ctx, token)
+
+	accessTTL, refreshTTL := s.ttls()
+	pair, data, err := s.sessions.RotateRefresh(ctx, refreshToken, accessTTL, refreshTTL)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := s.users.FindByID(ctx, data.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthResult{
+		User:         user.ToPublic(),
+		AccessToken:  pair.AccessToken,
+		RefreshToken: pair.RefreshToken,
+		AccessTTL:    accessTTL,
+		RefreshTTL:   refreshTTL,
+	}, nil
+}
+
+// LogoutInput carries tokens to revoke for the current login family.
+type LogoutInput struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+// Logout revokes the current session family (access + refresh).
+func (s *Service) Logout(ctx context.Context, in LogoutInput) error {
+	var first error
+	if in.AccessToken != "" {
+		if err := s.sessions.Revoke(ctx, in.AccessToken); err != nil && first == nil {
+			first = err
+		}
+	}
+	if in.RefreshToken != "" {
+		if err := s.sessions.RevokeByRefresh(ctx, in.RefreshToken); err != nil && first == nil {
+			first = err
+		}
+	}
+	return first
 }
 
 // Me returns the public profile for userID.
@@ -129,23 +172,34 @@ func (s *Service) Me(ctx context.Context, userID string) (*domain.PublicProfile,
 }
 
 func (s *Service) openSession(ctx context.Context, user *domain.User) (*AuthResult, error) {
-	ttl := s.cfg.AccessTokenTTL
-	if ttl <= 0 {
-		ttl = 15 * time.Minute
-	}
+	accessTTL, refreshTTL := s.ttls()
 
-	token, err := s.sessions.Create(ctx, ports.SessionData{
+	pair, err := s.sessions.Create(ctx, ports.SessionData{
 		UserID:   user.ID,
 		Username: user.Username,
 		Email:    user.Email,
-	}, ttl)
+	}, accessTTL, refreshTTL)
 	if err != nil {
 		return nil, fmt.Errorf("create session: %w", err)
 	}
 
 	return &AuthResult{
-		User:        user.ToPublic(),
-		AccessToken: token,
-		AccessTTL:   ttl,
+		User:         user.ToPublic(),
+		AccessToken:  pair.AccessToken,
+		RefreshToken: pair.RefreshToken,
+		AccessTTL:    accessTTL,
+		RefreshTTL:   refreshTTL,
 	}, nil
+}
+
+func (s *Service) ttls() (access, refresh time.Duration) {
+	access = s.cfg.AccessTokenTTL
+	if access <= 0 {
+		access = 15 * time.Minute
+	}
+	refresh = s.cfg.RefreshTokenTTL
+	if refresh <= 0 {
+		refresh = 7 * 24 * time.Hour
+	}
+	return access, refresh
 }

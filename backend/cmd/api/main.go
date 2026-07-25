@@ -76,7 +76,8 @@ func run() error {
 	users := persistence.NewUserRepository(db.Pool())
 	passwords := hasher.New()
 	identitySvc := application.New(users, sessions, passwords, application.Config{
-		AccessTokenTTL: cfg.Auth.AccessTokenTTL,
+		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
+		RefreshTokenTTL: cfg.Auth.RefreshTokenTTL,
 	})
 	identityHandler := identityhttp.NewHandler(identitySvc, cfg)
 
@@ -94,6 +95,7 @@ func run() error {
 		middleware.AccessLog,
 		middleware.RateLimit(limiter),
 		middleware.LoadSession(sessions),
+		// register/login bootstrap without CSRF; refresh requires CSRF (cookie already issued).
 		middleware.CSRF("/auth/register", "/auth/login"),
 	)
 

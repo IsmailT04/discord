@@ -21,6 +21,8 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserNotFound       = errors.New("user not found")
 	ErrUnauthenticated    = errors.New("unauthenticated")
+	ErrInvalidRefresh     = errors.New("invalid refresh token")
+	ErrRefreshReuse       = errors.New("refresh token reuse detected")
 )
 
 var usernamePattern = regexp.MustCompile(`^[a-zA-Z0-9_]{3,32}$`)

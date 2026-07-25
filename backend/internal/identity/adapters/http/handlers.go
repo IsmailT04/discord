@@ -96,14 +96,39 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	_ = httpx.WriteJSON(w, http.StatusOK, authResponse{User: result.User})
 }
 
-// Logout handles POST /auth/logout.
-func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	token := auth.SessionIDFromContext(r.Context())
-	if token == "" {
-		token = auth.SessionTokenFromRequest(r)
+// Refresh handles POST /auth/refresh.
+func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
+	refreshToken := auth.RefreshTokenFromRequest(r)
+	result, err := h.svc.Refresh(r.Context(), refreshToken)
+	if err != nil {
+		// Clear cookies on invalid/reused refresh so the client re-authenticates.
+		if errors.Is(err, domain.ErrInvalidRefresh) || errors.Is(err, domain.ErrRefreshReuse) {
+			auth.ClearAuthCookies(w, h.opts)
+		}
+		writeDomainErr(w, err)
+		return
 	}
 
-	if err := h.svc.Logout(r.Context(), token); err != nil {
+	if err := h.setSessionCookies(w, result); err != nil {
+		_ = httpx.WriteError(w, httpx.ErrInternalServer)
+		return
+	}
+
+	_ = httpx.WriteJSON(w, http.StatusOK, authResponse{User: result.User})
+}
+
+// Logout handles POST /auth/logout.
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	access := auth.SessionIDFromContext(r.Context())
+	if access == "" {
+		access = auth.SessionTokenFromRequest(r)
+	}
+	refresh := auth.RefreshTokenFromRequest(r)
+
+	if err := h.svc.Logout(r.Context(), application.LogoutInput{
+		AccessToken:  access,
+		RefreshToken: refresh,
+	}); err != nil {
 		_ = httpx.WriteError(w, httpx.ErrInternalServer)
 		return
 	}
@@ -131,13 +156,14 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) setSessionCookies(w http.ResponseWriter, result *application.AuthResult) error {
 	auth.SetAccessToken(w, result.AccessToken, result.AccessTTL, h.opts)
+	auth.SetRefreshToken(w, result.RefreshToken, result.RefreshTTL, h.opts)
 
 	csrf, err := auth.NewCSRFToken()
 	if err != nil {
 		return err
 	}
-	// Align CSRF cookie lifetime with the access session in v1.
-	auth.SetCSRFToken(w, csrf, result.AccessTTL, h.opts)
+	// CSRF outlives access so refresh still works after access expiry.
+	auth.SetCSRFToken(w, csrf, result.RefreshTTL, h.opts)
 	return nil
 }
 
@@ -177,6 +203,18 @@ func writeDomainErr(w http.ResponseWriter, err error) {
 		_ = httpx.WriteError(w, &httpx.APIError{
 			Code:    "INVALID_CREDENTIALS",
 			Message: "invalid email or password",
+			Status:  http.StatusUnauthorized,
+		})
+	case errors.Is(err, domain.ErrInvalidRefresh):
+		_ = httpx.WriteError(w, &httpx.APIError{
+			Code:    "INVALID_REFRESH",
+			Message: "refresh token is missing or invalid",
+			Status:  http.StatusUnauthorized,
+		})
+	case errors.Is(err, domain.ErrRefreshReuse):
+		_ = httpx.WriteError(w, &httpx.APIError{
+			Code:    "REFRESH_REUSE",
+			Message: "refresh token reuse detected; session revoked",
 			Status:  http.StatusUnauthorized,
 		})
 	case errors.Is(err, domain.ErrUserNotFound):
