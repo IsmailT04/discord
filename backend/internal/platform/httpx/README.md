@@ -10,6 +10,6 @@ Shared HTTP server utilities (not business routes).
 
 ## Remaining tasks
 
-- [ ] Problem+JSON or consistent `{ code, message }` errors
-- [ ] Request body size limits
-- [ ] Content-type enforcement helpers
+- [x] Problem+JSON or consistent `{ code, message }` errors
+- [x] Request body size limits
+- [x] Content-type enforcement helpers
